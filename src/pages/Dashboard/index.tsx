@@ -1,70 +1,82 @@
-import React from 'react';
+import React, { FormEvent, useState } from 'react';
 import { FiChevronRight } from 'react-icons/fi';
+import api from '../../services/api';
 
-import { Title, Form, Repositories } from './styles';
+import { Title, Form, Repositories, Error } from './styles';
 import logoImg from '../../assets/logo.svg';
 
-const Dashboard: React.FC = () => (
-  <>
-    <img src={logoImg} alt="logo" />
-    <Title>Explore Repositórios no Github</Title>
+interface Repository {
+  full_name: string;
+  description: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
+}
 
-    <Form>
-      <input placeholder="Digite o nome do repositório" />
-      <button type="submit">Pesquisar</button>
-    </Form>
+const Dashboard: React.FC = () => {
+  const [newRepo, setNewRepo] = useState('');
+  const [inputError, setInputError] = useState('');
+  const [repositories, setRepositories] = useState<Repository[]>([]);
 
-    <Repositories>
-      <a href="teste">
-        <img
-          src="https://avatars2.githubusercontent.com/u/60552754?s=460&u=cd39e1b1bdb94e1fa08acd866e2955867911fc00&v=4"
-          alt="Alex Silva"
+  async function handleAddRepository(
+    evt: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    evt.preventDefault();
+
+    if (!newRepo) {
+      setInputError('Digite o autor/nome do repositório');
+      return;
+    }
+
+    try {
+      const response = await api.get<Repository>(`repos/${newRepo}`);
+
+      const repository = response.data;
+
+      setRepositories([...repositories, repository]);
+      setNewRepo('');
+      setInputError('');
+    } catch (err) {
+      setInputError('Erro na busca por esse Repositório');
+      setNewRepo('');
+    }
+  }
+
+  return (
+    <>
+      <img src={logoImg} alt="logo" />
+      <Title>Explore Repositórios no Github</Title>
+
+      <Form hasError={!!inputError} onSubmit={handleAddRepository}>
+        <input
+          value={newRepo}
+          onChange={e => setNewRepo(e.target.value)}
+          placeholder="Digite o nome do repositório"
         />
+        <button type="submit">Pesquisar</button>
+      </Form>
 
-        <div>
-          <strong>alexsilva11/repo</strong>
-          <p>lorem ipsum dolor sit amet, consectetur adipiscing el</p>
-        </div>
-        <FiChevronRight size={20} />
-      </a>
-      <a href="teste">
-        <img
-          src="https://avatars2.githubusercontent.com/u/60552754?s=460&u=cd39e1b1bdb94e1fa08acd866e2955867911fc00&v=4"
-          alt="Alex Silva"
-        />
+      {inputError && <Error>{inputError}</Error>}
 
-        <div>
-          <strong>alexsilva11/repo</strong>
-          <p>lorem ipsum dolor sit amet, consectetur adipiscing el</p>
-        </div>
-        <FiChevronRight size={20} />
-      </a>
-      <a href="teste">
-        <img
-          src="https://avatars2.githubusercontent.com/u/60552754?s=460&u=cd39e1b1bdb94e1fa08acd866e2955867911fc00&v=4"
-          alt="Alex Silva"
-        />
+      <Repositories>
+        {repositories.map(repository => (
+          <a key={repository.full_name} href="teste">
+            <img
+              src={repository.owner.avatar_url}
+              alt={repository.owner.login}
+            />
 
-        <div>
-          <strong>alexsilva11/repo</strong>
-          <p>lorem ipsum dolor sit amet, consectetur adipiscing el</p>
-        </div>
-        <FiChevronRight size={20} />
-      </a>
-      <a href="teste">
-        <img
-          src="https://avatars2.githubusercontent.com/u/60552754?s=460&u=cd39e1b1bdb94e1fa08acd866e2955867911fc00&v=4"
-          alt="Alex Silva"
-        />
-
-        <div>
-          <strong>alexsilva11/repo</strong>
-          <p>lorem ipsum dolor sit amet, consectetur adipiscing el</p>
-        </div>
-        <FiChevronRight size={20} />
-      </a>
-    </Repositories>
-  </>
-);
+            <div>
+              <strong>{repository.full_name}</strong>
+              <p>{repository.description}</p>
+            </div>
+            <FiChevronRight size={20} />
+          </a>
+        ))}
+      </Repositories>
+    </>
+  );
+};
 
 export default Dashboard;
